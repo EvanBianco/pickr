@@ -118,11 +118,11 @@ class ResultsHandler(webapp2.RequestHandler):
     def get(self):
 
         # connect the dots using one dimensional linear interpretation: np.interp()
-        def regularize(xarr, yarr, px, py):
+        def regularize(xarr, yarr, pxi, pxf):
             # connect the dots of the horizon spanning the image
-            # px : is the number of horizontal pixels
-            # py : is the number of horizontal pixels
-            horx = np.arange(px)
+            # pxi : is the first x pos. 
+            # pyi : is the first y pos., and so on
+            horx = np.arange(pxi,pxf+1)
             hory = np.interp(horx, xarr, yarr)
             return horx, hory
         
@@ -142,6 +142,7 @@ class ResultsHandler(webapp2.RequestHandler):
             # Load the image to a variable
             im = Image.open('brazil_ang_unc.png')
             px, py = im.size
+            
         
             # plot the seismic image first
             # im = plt.imshow(im)
@@ -153,31 +154,40 @@ class ResultsHandler(webapp2.RequestHandler):
             for user in data:
                 try:
                     picks = np.array(json.loads(user.picks))
-                    hx, hy = regularize(picks[:,0], picks[:,1], px, py)
+                    hx, hy = regularize(picks[:,0], picks[:,1], pxi, pyf)
                     all_picks_x = np.concatenate((all_picks_x,hx))
                     all_picks_y = np.concatenate((all_picks_y,hy))
                     ax.plot(picks[:,0], picks[:,1], 'g-', alpha=0.5, lw=2)
 
                     m = 1
+                    
+                    x1, x2 =  np.amin(all_picks_x), np.amax(all_picks_x)
+                    y1, y2 = np.amin(all_picks_y),np.amax(all_picks_y)
+
+                    heat_extent_im = [x1,x2,y2,y1] #flip extents of heatmap for image plot
                     # do 2d histogram to display heatmap
                     binsizex = m
                     binsizey = m
-                    heatmap, yedges, xedges = np.histogram2d(all_picks_y, all_picks_x,
-                                                             bins=(720/binsizex,1080/binsizey),
-                                                             range=np.array([[0, 720], [0,1080]]))
-                    extent = [0, 1080,
-                              720, 0 ]
+                    heatmap, yedges, xedges = np.histogram2d(all_picks_y, all_picks_x, 
+                                                            bins= ((y2-y1)/binsizey,(x2-x1)/binsizex),
+                                                            range =np.array([[y1, y2],[x1, x2]])
+                                                            )
 
                     # do dilation of picks in heatmap
-                    heatmap_dil = heatmap#grey_dilation(heatmap,size=(5,5))
+                    from mmorph import dilate
+                    n = 3 #should be odd integer
+                    B = np.array((n,n)).astype(int)
+                    heatmap_dil = dilate(heatmap, B=B)
                 
                     #fig = plt.figure(figsize=(15,8))
                     #ax = fig.add_axes([0, 0, 1, 1])
-                    #heatim = ax.imshow(heatmap,
-                    #                   cmap=cm.hot, extent=extent, alpha=0.75)
-                    #heatim.set_clim(0.5, np.amax(heatmap))
-                    ax.set_ylim((720,0))
-                    ax.set_xlim((0,1080))
+                    heatim = ax.imshow(heatmap_dil,
+                                       cmap=cm.hot, 
+                                       extent=heat_extent_im,
+                                       alpha=0.75)
+                    heatim.set_clim(0.5, np.amax(heatmap))
+                    ax.set_ylim((py,0))
+                    ax.set_xlim((0,px))
                     #ax.invert_yaxis()
                     ax.set_xticks([])
                     ax.set_yticks([])
