@@ -45,9 +45,8 @@ def get_result_image(img_obj):
     data = Picks.all().ancestor(img_obj).fetch(1000)
     
     # Get the dimensions.
-    reader = blobstore.BlobReader(img_obj.image)
-    im = Image.open(reader, 'r')
-    px, py = im.size
+    #px, py = img_obj.size # This gets the image from the blobstore
+    px, py = img_obj.width, img_obj.height # This doesn't 
 
     # Make an 'empty' image for all the results. 
     heatmap_image = np.zeros((py,px))

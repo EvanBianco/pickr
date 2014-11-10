@@ -1,5 +1,6 @@
 from google.appengine.ext import db
 from google.appengine.ext import blobstore
+from PIL import Image
 
 import json
 
@@ -36,16 +37,25 @@ class Picks(db.Model):
 class ImageObject(db.Model):
 
     image = blobstore.BlobReferenceProperty()
-    description = db.StringProperty()
 
-    challenge = db.StringProperty()
+    width = db.IntegerProperty()
+    height = db.IntegerProperty()
+
     title = db.StringProperty()
+    description = db.StringProperty()
+    challenge = db.StringProperty()
     permission = db.StringProperty()
 
     user = db.UserProperty()
     name = db.StringProperty()
-   
 
+    @property
+    def size(self):
+        """
+        Returns the size as a tuple
+        """
+        reader = blobstore.BlobReader(self.image)
+        im = Image.open(reader, 'r')
+        s = im.size
 
-
-
+        return s # width, height

@@ -8,8 +8,6 @@ pickDrawingSetup = function(){
     var linestrip;    
     
     // TODO: Hard-coded base image size
-    var baseImageWidth = 1080;
-    var baseImageHeight = 720;
     var aspectRatio = baseImageWidth / baseImageHeight;
     var resizeScale = 1;
     

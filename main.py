@@ -188,7 +188,8 @@ class ResultsHandler(webapp2.RequestHandler):
         image_url = images.get_serving_url(img_obj.image)
 
         image, count = get_result_image(img_obj)
-        
+        image_width = img_obj.width
+        image_height = img_obj.height
 
         user = users.get_current_user()
 
@@ -203,7 +204,9 @@ class ResultsHandler(webapp2.RequestHandler):
                                 email_hash=email_hash,
                                 image=image,
                                 image_url=image_url,
-                                image_key=image_key)
+                                image_key=image_key,
+                                image_width=image_width,
+                                image_height=image_height)
 
         self.response.write(html)
 
@@ -241,17 +244,19 @@ class PickerHandler(webapp2.RequestHandler):
             key_id = self.request.get("image_key")
 
 
-        image_obj= ImageObject.get_by_id(int(key_id),
-                                         parent=db_parent)
+        img_obj= ImageObject.get_by_id(int(key_id),
+                                       parent=db_parent)
 
         try:
-            image_url = images.get_serving_url(image_obj.image)
+            image_url = images.get_serving_url(img_obj.image)
         except:
             print "handle this error"
                 
-        challenge = image_obj.challenge
-        permission = image_obj.permission
-                
+        challenge = img_obj.challenge
+        permission = img_obj.permission
+        image_width = img_obj.width
+        image_height = img_obj.height
+
         # Write the page.
         template = env.get_template('pickpoint.html')
         html = template.render(logout_url=logout_url,
@@ -260,7 +265,9 @@ class PickerHandler(webapp2.RequestHandler):
                                image_url=image_url,
                                image_key=key_id,
                                challenge=challenge,
-                               permission=permission)
+                               permission=permission,
+                               image_width=image_width,
+                               image_height=image_height)
 
         self.response.write(html)
      
@@ -474,6 +481,9 @@ class AddImageHandler(PickThisPageRequest):
 
         img_obj = ImageObject.get_by_id(int(image_key),
                                         parent=db_parent)
+
+        img_obj.width = img_obj.size[0]
+        img_obj.height = img_obj.size[1]
 
         img_obj.title = title
         img_obj.description = description
