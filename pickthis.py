@@ -18,7 +18,7 @@ def regularize(xarr, yarr):
     Connect the dots of each interpretation.
     
     """
-    horx = np.arange(np.amin(xarr), np.amax(xarr)+1)
+    horx = np.arange(np.amin(xarr), np.amax(xarr))
     hory = np.interp(horx, xarr, yarr)
     return horx.astype(int), hory.astype(int)
 
@@ -66,6 +66,7 @@ def get_result_image(img_obj):
         # dilate this image
         r = np.array([[0, py], [0, px]])
         n = np.ceil(py / 500.0).astype(int) # The radius of the disk structuring element
+        n = 2
         dilated_image = dilate(user_image.astype(int), B = sedisk(r=n) )
         heatmap_image += dilated_image
 
