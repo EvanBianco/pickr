@@ -18,7 +18,6 @@
 
 
 
-
 <div class="container">
 <div class="container">
 
@@ -27,27 +26,36 @@
   <div class="col-md-4" style="top:2.6em;">
 	<button type="button" id="previous-button" 
 		class="btn btn-primary btn-lrg">
-	  <span class="glyphicon glyphicon-chevron-left"></span> Previous
+	  <span class="glyphicon glyphicon-chevron-left"></span> 
+	  Previous
 	</button>
   </div>
 
-  <div class="col-md-4" style="vertical-align:center; text-align:center;">
-	<button type="button" id="up-vote-button" class="btn btn-default btn-sm">
+  <div class="col-md-4" 
+       style="vertical-align:center; text-align:center;">
+    <button type="button" id="up-vote-button" 
+	    class="btn btn-default btn-sm">
 	  <span class="glyphicon glyphicon-thumbs-up"></span>
 	</button>
 	  
 <!-- do the county thing -->
 
-	<div id="vote-count" style="font-size:200%; font-weight:bold; text-align:center;">0</div>
+	<div id="vote-count" 
+	     style="font-size:200%; font-weight:bold; text-align:center;">
+	  {{count}}
+	</div>
 
-	<button type="button" id="down-vote-button" class="btn btn-default btn-sm">
+	<button type="button" id="down-vote-button" 
+		class="btn btn-default btn-sm">
 	  <span class="glyphicon glyphicon-thumbs-down"></span>
-	  </button>
+	</button>
   </div>
 
   <div class="col-md-4" style="top:2.6em;">
-    <button type="button" id="next-button" class="btn btn-primary btn-lrg">
-	  <span class="glyphicon glyphicon-chevron-right"></span> Next
+    <button type="button" id="next-button" 
+	    class="btn btn-primary btn-lrg">
+	  <span class="glyphicon glyphicon-chevron-right"></span> 
+	  Next
     </button>
   </div>
 

@@ -119,6 +119,7 @@ pickDrawingSetup = function(){
         {
            data.forEach(function(item){
                addPoint({x:item[0], y:item[1]});
+	       
            });
         }, 'json');
     }

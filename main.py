@@ -22,7 +22,7 @@ from pickthis import get_result_image
 import cloudstorage as gcs
 
 # Pick This objects
-from lib_db import ImageObject, SeismicParent, SeismicPicks
+from lib_db import ImageObject, SeismicParent, Picks, Vote
 
 if not os.environ.get('SERVER_SOFTWARE','').startswith('Development'):
     local = False
@@ -93,34 +93,71 @@ class CommentHandler(webapp2.RequestHandler):
 class VoteHandler(webapp2.RequestHandler):
 
     def get(self):
+
+        self.response.headers["Content-Type"] = "application/json"
         
+        user = users.get_current_user()
         index = int(self.request.get("index"))
+        image_key = int(self.request.get("image_key"))
 
-        data = ImageObject.all().ancestor(db_parent).order("-date")
-        data = data.fetch(1000)[index]
+    
+        img = ImageObject.get_by_id(image_key, parent=db_parent)
+        picks = Picks.all().ancestor(img).order("date").fetch(1000)
+        picks = picks[index]
 
-        self.response.write(data.votes)
+        votes = picks.votes
+
+        if user:
+            user_vote = Vote.all().ancestor(picks).filter("user =",
+                                                            user)
+            user_vote = user_vote.get()
+            if not user_vote:
+                user_choice = 0
+            else:
+                user_choice = user_vote.value
+                
+        else:
+            user_choice = 0
+
+        data = {"votes": votes,
+                "user_choice": user_choice}
+    
+        
+        self.response.write(json.dumps(data))
         
         
     def post(self):
 
+        self.response.headers["Content-Type"] = "application/json"
+
         index = int(self.request.get("index"))
-        vote = int(self.request.get("vote"))
+        update_vote = int(self.request.get("vote"))
+        img_key = int(self.request.get("image_key"))
+        user = users.get_current_user()
 
-        data = ImageObject.all().ancestor(db_parent).order("-date")
-        data = data.fetch(1000)[index]
+        img = ImageObject.get_by_id(img_key,
+                                    parent=db_parent)
+        picks = Picks.all().ancestor(img).order("date").fetch(1000)
 
-
-        if vote > 0:
-            vote = 1
+        if update_vote > 0:
+            update_vote = 1
         else:
-            vote =-1
-        
-        data.votes += vote
+            update_vote = -1
 
-        data.put()
+        vote = Vote.all().ancestor(picks[index]).filter("user =",
+                                                        user).get()
+        if vote is None:
+            vote = Vote(user=user, value=update_vote,
+                        parent=picks[index])
+        else:
+            vote.value = update_vote
+
+        vote.put()
         
-        self.response.write(data.votes)
+        data = {"votes": picks[index].votes,
+                "user_choice": vote.value}
+        
+        self.response.write(json.dumps(data))
  
 
 class MainPage(webapp2.RequestHandler):
@@ -139,7 +176,6 @@ class MainPage(webapp2.RequestHandler):
             logout_url = users.create_logout_url('/')
             login_url = None
             email_hash = hashlib.md5(user.email()).hexdigest()
-
             self.redirect('/library')
             
 
@@ -192,17 +228,17 @@ class PickerHandler(webapp2.RequestHandler):
 
     def get(self, id=None):
 
-        if id:
-            key_id = id
-        else:
-            key_id = self.request.get("image_key")
-
         user = users.get_current_user()
 
         # User should exist, so this should fail otherwise.
         logout_url = users.create_logout_url('/')
         login_url = None
         email_hash = hashlib.md5(user.email()).hexdigest()
+
+        if id:
+            key_id = id
+        else:
+            key_id = self.request.get("image_key")
 
 
         image_obj= ImageObject.get_by_id(int(key_id),
@@ -240,7 +276,7 @@ class PickHandler(webapp2.RequestHandler):
 
         if self.request.get("user_picks"):
    
-            seismic_obj = SeismicPicks.all().ancestor(img_obj)
+            seismic_obj = Picks.all().ancestor(img_obj)
             data = seismic_obj.filter("user =", user).get()
             
             if data:
@@ -251,7 +287,7 @@ class PickHandler(webapp2.RequestHandler):
             return
         
         if self.request.get("all"):
-            data = SeismicPicks.all().ancestor(img_obj).fetch(1000)
+            data = Picks.all().ancestor(img_obj).fetch(1000)
 
             picks = [i.picks for i in data]
             self.response.write(data)
@@ -259,7 +295,7 @@ class PickHandler(webapp2.RequestHandler):
 
         if self.request.get("pick_index"):
 
-            data = SeismicPicks.all().ancestor(img_obj)
+            data = Picks.all().ancestor(img_obj)
             data = data.order("-date").fetch(1000)
 
             index = int(self.request.get("pick_index"))
@@ -280,11 +316,11 @@ class PickHandler(webapp2.RequestHandler):
 
         image_obj = ImageObject.get_by_id(int(image_key),
                                           parent=db_parent)
-        picks = SeismicPicks.all().ancestor(image_obj)
+        picks = Picks.all().ancestor(image_obj)
         picks = picks.filter("user =", user).get()
 
         if not picks:
-            picks = SeismicPicks(user=user,
+            picks = Picks(user=user,
                                  picks=json.dumps([point]).encode(),
                                  parent=image_obj)
             picks.put()
@@ -306,7 +342,7 @@ class PickHandler(webapp2.RequestHandler):
         img_obj = ImageObject.get_by_id(int(image_key),
                                         parent=db_parent)
 
-        data = SeismicPicks.all().ancestor(img_obj).filter("user =",
+        data = Picks.all().ancestor(img_obj).filter("user =",
                                                            user)
         data = data.get()
 

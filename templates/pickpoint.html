@@ -20,7 +20,7 @@
 
   <div class="row" style="margin-top:16px; margin-bottom:24px;">
     <div class="col-md-8 col-sm-6 col-xs-6">
-    <p class="lead">{{ challenge.strip(' .') }}. Click <strong>Submit</strong> when you're done.
+    <p class="lead">{% if challenge %}{{ challenge.strip(' .!') }}. {% endif %}Click <strong>Submit</strong> when you're done.
     </div>
     <div class="col-md-4 col-sm-6 col-xs-6">
       <div class="btn-toolbar pull-right">
