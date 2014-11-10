@@ -328,8 +328,8 @@ class PickHandler(webapp2.RequestHandler):
 
         if not picks:
             picks = Picks(user=user,
-                                 picks=json.dumps([point]).encode(),
-                                 parent=image_obj)
+                          picks=json.dumps([point]).encode(),
+                          parent=image_obj)
             picks.put()
         else:
 

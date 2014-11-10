@@ -39,7 +39,14 @@
         <img class="img-responsive" src="{{i['image']}}" alt="" />
       </a>
       <div class="caption" style="height:140px;">
-      	<span class="lead">{{i.title}}</span><br />
+      	<span class="lead">{{i.title}}</span>
+        <!--
+        See GitHub Issue #54
+        Show a green checkmark if the user interpreted this image
+        If they did we also want to change the image link (above) to the results page: href="/results?image_key={{i['key']}}"
+        pseudocode: {% if USER in INTERPRETERS %}&nbsp;<span style="color:green;" class="glyphicon glyphicon-ok-sign"></span>{% endif %}
+        -->
+        <br />
         {{i.description[:100]}}{% if i.description | length>100 %}&#8230;{% endif %} <!-- Limit to 100 characters -->
       </div>
     </div>
