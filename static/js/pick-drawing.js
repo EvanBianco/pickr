@@ -31,7 +31,7 @@ pickDrawingSetup = function(){
     var addOverlay = function(url)
     {
         var overlay = paper.image(url, 0, 0, baseImageWidth, baseImageHeight);
-        return overlay.attr({opacity: 0.5});
+        return overlay.attr({opacity: 0.67});
     }
 
     var addCircle = function(x, y)
@@ -115,7 +115,8 @@ pickDrawingSetup = function(){
         clearPoints();
         $.get('/update_pick?', parameters, function(data)
         {
-           data.forEach(function(item){
+	
+            data.forEach(function(item){
                addPoint({x:item[0], y:item[1]});
 	       
            });

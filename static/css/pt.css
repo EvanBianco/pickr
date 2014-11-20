@@ -26,9 +26,68 @@ body {
    z-index: 500;
    }
 
-.navbar-text {
+.pull-right .dropdown-menu:after {
+    left: auto;
+    right: 13px;
+}
+.pull-right .dropdown-menu {
+    left: auto;
+    right: 0;
+}
+
+.notification-icon .glyphicon {
+   font-size:200%;
+   top: 8px;
+}
+
+.pt-faved {
+  color: #ff9900;
+}
+
+.pt-unfaved {
+   color:#999999;
+}
+
+.notification-icon .pt-stars {
+   color:white;
+   font-size:90%;
+   font-weight:bold;
+   align:center;
+   position:relative;
+   top: -2px;
+   left: -22px;
+}
+
+.pt-picked {
+  color: green;
+}
+
+.pt-count {
+  /* pass */
+}
+
+.pt-counted {
+  margin-top:6px;
+  font-size:120%;
+  background: green;
+}
+
+.pt-uncounted {
+  margin-top:6px;
+  font-size:120%;
+  background: #999999;
+}
+
+.pt-subtitle {
   font-style: italic;
   color: #cccccc;
+}
+
+.pt-rep {
+  float:right;
+  font-family: 'Nunito', sans-serif;
+  font-size: 120%;
+  color: #000000;
 }
 
 @media (min-width: 768px) {
@@ -39,7 +98,6 @@ body {
   margin-right:0px;
   float:none;
   }
-
 }
 
 .pt-nav {
@@ -64,7 +122,6 @@ body {
   background-size: 32px;
   background-position: 12px;
 }
-
 
 .pt-footer {
   color:lightgray;
@@ -92,4 +149,29 @@ body {
 
 .thumbnail img{
 // your styles for the images
+}
+
+.yellow {
+    color: yellow;
+}
+
+.grey {
+    color: grey;
+}
+
+.blue {
+    color: blue;
+}
+.green {
+    color: green;
+}
+
+.red {
+    color: red;
+}
+
+a.disabled {
+   color:gray;
+   pointer-events: none;
+   cursor: default;
 }

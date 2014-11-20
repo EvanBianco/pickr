@@ -39,7 +39,7 @@
       <nav class="navbar navbar-default" role="navigation">
           <strong><a class="navbar-brand pt-title" style="font-family: 'Nunito', sans-serif;" href="/">pick this</a></strong>
           <ul class="nav navbar-nav hidden-xs">
-            <li><p class="navbar-text">social image interpretation</p></li>
+            <li><p class="navbar-text pt-subtitle">social image interpretation</p></li>
           </ul>
           {% if logout_url %}
             <ul class="nav navbar-right pt-nav">
@@ -50,9 +50,13 @@
                   </figure>
                 </a>
                 <ul class="dropdown-menu" role="menu">
+                  <li><a class="disabled">{{ nickname }}</a></li> <!-- for some reason I need the <a> tag to format correctly -->
                   <li><a href="{{ logout_url }}">sign out</a></li>
                 </ul>
               </li>
+            </ul>
+            <ul class="nav navbar-right">
+              <li><p class="navbar-text pt-rep"><a id="popoverOption" href="#" data-content="{{ cred_points }}" rel="popover" data-placement="bottom" data-original-title="Reputation">{{ cred_points }}</a></p></li>
             </ul>
           {% else %}
             <ul class="nav navbar-nav navbar-right pt-nav">
@@ -78,13 +82,26 @@
   <!-- Footer -->
   <footer class="footer" role="content-info">
     <div class="container" style="margin-top:24px;">  
+    <hr />
+      <div class="pt-footer pull-right" style="margin-top:-10px;">
+        <a href="http://www.agilegeoscience.com/"><img src="/static/img/agile.png" width="64px" alt="Agile" /></a>
+        <a href="http://www.durwella.com/"><img src="/static/img/durwella.png" width="64px" alt="Durwella" /></a>
+        <a href="/about"><img src="/static/img/dotted_tile.png" width="64px" title="Support this project!" /></a>
+        <a href="/about"><img src="/static/img/dotted_tile.png" width="64px" title="Support this project!" /></a>
+        <a href="/about"><img src="/static/img/dotted_tile.png" width="64px" title="Support this project!" /></a>
+      </div>
       <div class="pt-footer">
         <p>
-          <a href="http://www.subsurfwiki.org/wiki/Geophysics_Hackathon_2014">Geophysics Hackathon 2014</a>&nbsp;&bullet;&nbsp;Team Pick This&nbsp;&nbsp;&nbsp;&nbsp; <a href="/about">About</a>&nbsp;&bullet;&nbsp;<a href="/terms">Terms&nbsp;&amp;&nbsp;privacy</a><br />
+          Team Pick This&nbsp;&nbsp;&bullet;&nbsp;&nbsp;<a href="http://www.subsurfwiki.org/wiki/Geophysics_Hackathon_2014">2014 Geophysics Hackathon </a> &nbsp;&nbsp;&nbsp;&nbsp; <a href="/about">About</a>&nbsp;&nbsp;&bullet;&nbsp;&nbsp;<a href="/terms">Terms&nbsp;&amp;&nbsp;privacy</a><br />
         </p>
       </div><!-- End of pt-footer -->
     </div> <!-- End of container -->
   </footer>
+
+  <!-- Little script helps with reputation popover -->
+  <script>
+    $('#popoverOption').popover({ trigger: "hover" });
+  </script>
 
   <!-- Google Analytics -->
   <script>

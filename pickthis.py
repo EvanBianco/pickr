@@ -12,6 +12,7 @@ from PIL import Image
 from mmorph import dilate, sedisk
 
 
+
 def regularize(xarr, yarr, px, py):
     """
     For line interpretations.
@@ -80,8 +81,9 @@ def get_result_image(img_obj):
         heatmap_image += dilated_image
 
     # Normalize the heatmap from 0-255 for making an image.
-    # We subtract 1 first to normalize to the non-zero data only.
-    heatmap_norm = normalize(heatmap_image - 1, 255)
+    # More muted version: Subtract 1 first to normalize to
+    # the non-zero data only.
+    heatmap_norm = normalize(heatmap_image, 255)
     
     # Make the RGB channels.
     r = np.clip((2 * heatmap_norm), 0, 255)
@@ -107,3 +109,18 @@ def get_result_image(img_obj):
     count = len(data)
 
     return base64.b64encode(output.getvalue()), count
+
+
+def get_cred(user):
+
+    all_picks = Picks.all().filter("user =", user).fetch(1000)
+
+    cred_points = 0
+
+    for picks in all_picks:
+        cred_points += picks.votes
+
+    return cred_points
+
+
+    

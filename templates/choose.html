@@ -4,12 +4,13 @@
 
 {% block content %}
 
+
 <!-- Page Content -->
 <div class="container">
 
   <div class="row" style="margin-top:18px; margin-bottom:30px;">
     <div class="col-md-8 col-sm-6 col-xs-6">
-    <p class="lead">Choose an image to interpret, or {% if login_url %}<strong><a href={{login_url}}>sign in</a></strong> to {% endif %}upload one of your own.</p>
+    <p class="lead"> {% if login_url %}<strong><a href={{login_url}}>Sign in</a></strong> to choose{% else %}Choose{% endif %}&nbsp;an image to interpret, or upload one of your own.</p>
     </div>
     <div class="col-md-4 col-sm-6 col-xs-6">
       <div class="pull-right">
@@ -32,26 +33,59 @@
     </div>
   </div><!-- end of row -->
 
-  {% for i in images %}
+  <!-- Build the gallery by looping over the images. -->
+  <!-- A little tricky as we're changing the links and adding a badge if the user
+       has interpreted that particular image. -->
+  {% for img_obj in img_objs %}
   <div>
     <div class="col-lg-3 col-md-4 col-xs-6 thumb">
-      <a class="thumbnail" {% if login_url %}href="#"{% else %} href="/pickr?image_key={{i['key']}}"{% endif %} >
-        <img class="img-responsive" src="{{i['image']}}" alt="" />
+      <a class="thumbnail"
+        {% if login_url %} data-toggle="modal" data-target="#signInModel" 
+	 href="#" {% elif user_id in img_obj.interpreters %} 
+	href="/results?image_key={{img_obj.id}}" {% else %} href="/pickr?image_key={{img_obj.id}}"{% endif %}>
+        <img class="img-responsive" src="{{img_obj.url}}" alt="" />
       </a>
       <div class="caption" style="height:140px;">
-      	<span class="lead">{{i.title}}</span>
-        <!--
-        See GitHub Issue #54
-        Show a green checkmark if the user interpreted this image
-        If they did we also want to change the image link (above) to the results page: href="/results?image_key={{i['key']}}"
-        pseudocode: {% if USER in INTERPRETERS %}&nbsp;<span style="color:green;" class="glyphicon glyphicon-ok-sign"></span>{% endif %}
-        -->
+      	<span class="lead">{{img_obj.title}}</span>
+        {% if user_id == img_obj.user_id %}&nbsp;<a href="/add_image?image_key={{img_obj.id}}" class="glyphicon glyphicon-pencil" title="edit details"></a>{% endif %}
+        <span class="pull-right">
+          <span class="notification-icon">
+            {% if user_id not in img_obj.favouriters %}&nbsp;<span class="glyphicon glyphicon-certificate pt-unfaved" title="you have not starred this image"></span>
+              {% else %}&nbsp;<span class="glyphicon glyphicon-star pt-faved" title="you starred this image"></span>
+            {% endif %}
+            <span class="pt-stars">{{ img_obj.favouriters | length }}</span>
+          </span>
+        <span class="badge {% if user_id in img_obj.interpreters %}pt-counted{% else %}pt-uncounted{% endif %}">{{ img_obj.interpreters | length }}</span>
+        </span>
         <br />
-        {{i.description[:100]}}{% if i.description | length>100 %}&#8230;{% endif %} <!-- Limit to 100 characters -->
+        {{img_obj.description[:100]}}
+        {% if img_obj.description | length>100 %}&#8230;{% endif %} <!-- Limit to 100 characters -->
       </div>
     </div>
   </div>
   {% endfor %}
+
+
+<!-- Sign-in Alert Modal -->
+<div class="modal fade" id="signInModel" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" 
+		data-dismiss="modal">
+	  <span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+        <h4 class="modal-title" id="myModalLabel">Whoa there!</h4>
+      </div>
+      <div class="modal-body">
+        You must sign in to interpret an image or see others' interpretations. 
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+        <a class="btn btn-info" role="button" href="{{ login_url }}">Sign in</a>
+      </div>
+    </div>
+  </div>
+</div>
 
 
 

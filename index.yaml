@@ -20,15 +20,3 @@ indexes:
   properties:
   - name: date
     direction: desc
-
-- kind: SeismicObject
-  ancestor: yes
-  properties:
-  - name: date
-    direction: desc
-
-- kind: SeismicPicks
-  ancestor: yes
-  properties:
-  - name: date
-    direction: desc

@@ -6,10 +6,10 @@
 
 <head>
 <script>
-  var image_url = "{{image_url}}";
-  var image_key = "{{image_key}}";
-  var baseImageWidth = "{{image_width}}";
-  var baseImageHeight = "{{image_height}}";
+  var image_url = "{{img_obj.url}}";
+  var image_key = "{{img_obj.id}}";
+  var baseImageWidth = "{{img_obj.width}}";
+  var baseImageHeight = "{{img_obj.height}}";
 </script>
 <script src="/static/js/raphael-min.js"></script>
 <script src="/static/js/underscore-min.js"></script>
@@ -21,7 +21,7 @@
 
   <div class="row" style="margin-top:16px; margin-bottom:24px;">
     <div class="col-md-8 col-sm-6 col-xs-6">
-    <p class="lead">{% if challenge %}{{ challenge.strip(' .!') }}. {% endif %}Click <strong>Submit</strong> when you're done.
+    <p class="lead">{% if img_obj.challenge %}{{ img_obj.challenge.strip(' .!') }}. {% endif %}Click <strong>Submit</strong> when you're done.
     </div>
     <div class="col-md-4 col-sm-6 col-xs-6">
       <div class="btn-toolbar pull-right">
@@ -37,15 +37,15 @@
     </div>
   </div><!-- end of row -->
 
-  <div id="seismic-div">
+  <div id="image-div">
     <!-- image goes here -->
   </div>
-  <p class="pull-right" style="font-size:80%">Permission: {{ permission }}</p>
+  <p class="pull-right" style="font-size:80%">Uploaded by: {{img_obj.user.nickname()}} &mdash; Image owner: {{ img_obj.rightsholder }}</p>
 
   <!-- div for big green button at bottom -->
   <div class="col-md-offset-2 col-md-8" style="margin-bottom:24px; margin-top:24px;">
     <button type="button" class="btn btn-success btn-lg btn-block" 
-	    onclick="document.location.href='/results?image_key={{image_key}}'">
+	    onclick="document.location.href='/results?image_key={{img_obj.id}}'">
       I'm all done... Submit!
     </button>
   </div>

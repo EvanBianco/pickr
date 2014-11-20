@@ -1,6 +1,9 @@
 from google.appengine.ext import db
 from google.appengine.ext import blobstore
+from google.appengine.api import images
+
 from PIL import Image
+
 
 import json
 
@@ -10,7 +13,7 @@ class Vote(db.Model):
     user = db.UserProperty()
     value = db.IntegerProperty()
     
-class SeismicParent(db.Model):
+class ImageParent(db.Model):
     pass
 
 class Picks(db.Model):
@@ -41,13 +44,25 @@ class ImageObject(db.Model):
     width = db.IntegerProperty()
     height = db.IntegerProperty()
 
-    title = db.StringProperty()
-    description = db.StringProperty()
-    challenge = db.StringProperty()
-    permission = db.StringProperty()
+    title = db.StringProperty(default="")
+    description = db.StringProperty(default="")
+    challenge = db.StringProperty(default="")
+    permission = db.StringProperty(default="")
+    pickstyle = db.StringProperty(default="")
+    rightsholder = db.StringProperty(default="")
 
+    # This is safer than using a user directly
+    # Because email address can change.
+    user_id = db.StringProperty()
+
+    # Not sure if we need this for backwards compatibility?
     user = db.UserProperty()
-    name = db.StringProperty()
+
+    name = db.StringProperty() # What is this for? 
+                               # Doesn't get populated.
+
+    interpreters = db.ListProperty(str, default=[])
+    favouriters = db.ListProperty(str, default=[])
 
     @property
     def size(self):
@@ -59,3 +74,16 @@ class ImageObject(db.Model):
         s = im.size
 
         return s # width, height
+
+    @property
+    def url(self):
+        """
+        Returns a serving url for the image
+        """
+        return images.get_serving_url(self.image)
+
+    @property
+    def id(self):
+
+        return self.key().id()
+    

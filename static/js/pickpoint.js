@@ -1,9 +1,9 @@
 $(function() {
-    pickDrawing.setup('seismic-div');
+    pickDrawing.setup('image-div');
     pickDrawing.load({ user_picks: 1,
 		       image_key: image_key});
 
-    $('#seismic-div').click(function(e) {
+    $('#image-div').click(function(e) {
         var imageX = e.pageX - this.offsetLeft;
         var imageY = e.pageY - this.offsetTop - 2;
         var point = { x: imageX, y: imageY };
