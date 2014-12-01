@@ -10,6 +10,26 @@ indexes:
 # automatically uploaded to the admin console when you next deploy
 # your application using appcfg.py.
 
+- kind: Comment
+  ancestor: yes
+  properties:
+  - name: datetime
+
+- kind: ImageObject
+  properties:
+  - name: user
+  - name: title
+
+- kind: ImageObject
+  properties:
+  - name: user_id
+  - name: title
+
+- kind: ImageObject
+  ancestor: yes
+  properties:
+  - name: title
+
 - kind: Picks
   ancestor: yes
   properties:
@@ -20,3 +40,15 @@ indexes:
   properties:
   - name: date
     direction: desc
+
+- kind: Picks
+  ancestor: yes
+  properties:
+  - name: user
+  - name: date
+
+- kind: Picks
+  ancestor: yes
+  properties:
+  - name: user_id
+  - name: user_id

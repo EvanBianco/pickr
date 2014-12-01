@@ -6,10 +6,11 @@
 
 <head>
 <script>
-  var image_url = "{{img_obj.url}}";
-  var image_key = "{{img_obj.id}}";
-  var baseImageWidth = "{{img_obj.width}}";
-  var baseImageHeight = "{{img_obj.height}}";
+  var image_url = "{{ img_obj.url(size=1200) }}";
+  var image_key = "{{ img_obj.id }}";
+  var baseImageWidth = "{{ img_obj.width }}";
+  var baseImageHeight = "{{ img_obj.height }}";
+  var pickstyle = "{{ img_obj.pickstyle }}";
 </script>
 <script src="/static/js/raphael-min.js"></script>
 <script src="/static/js/underscore-min.js"></script>
@@ -40,7 +41,8 @@
   <div id="image-div">
     <!-- image goes here -->
   </div>
-  <p class="pull-right" style="font-size:80%">Uploaded by: {{img_obj.user.nickname()}} &mdash; Image owner: {{ img_obj.rightsholder }}</p>
+  <p class="pull-right" style="font-size:80%">
+    Uploaded by: {{ img_obj.nickname }} &mdash; Image owner: {{ img_obj.rightsholder }}</p>
 
   <!-- div for big green button at bottom -->
   <div class="col-md-offset-2 col-md-8" style="margin-bottom:24px; margin-top:24px;">

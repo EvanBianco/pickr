@@ -1,5 +1,5 @@
-application: seismic-picker
-version: 1
+application: pick-this
+version: "dev"
 runtime: python27
 api_version: 1
 threadsafe: true
@@ -26,8 +26,5 @@ libraries:
   version: latest
 
 - name: numpy
-  version: latest
-
-- name: matplotlib
   version: latest
 

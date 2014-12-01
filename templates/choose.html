@@ -4,30 +4,42 @@
 
 {% block content %}
 
+<script>
+updateURL = function(){
 
+  $.get("/BlobURL", function (data){
+    $("#submit").attr('action', data);
+    $("#submit").click();
+  }
+ }
+
+</script>
 <!-- Page Content -->
 <div class="container">
 
   <div class="row" style="margin-top:18px; margin-bottom:30px;">
     <div class="col-md-8 col-sm-6 col-xs-6">
-    <p class="lead"> {% if login_url %}<strong><a href={{login_url}}>Sign in</a></strong> to choose{% else %}Choose{% endif %}&nbsp;an image to interpret, or upload one of your own.</p>
+    <p class="lead"> {% if login_url %}<strong><a href={{login_url}}>Sign in</a></strong> to choose{% else %}Choose{% endif %}&nbsp;an image to interpret{% if cred_points>15 %}, or upload one of your own{% endif %}.</p><!-- user.can_upload would be more elegant -->
     </div>
     <div class="col-md-4 col-sm-6 col-xs-6">
       <div class="pull-right">
-        <form action="{{upload_url}}" method="POST" enctype="multipart/form-data">
+        <form action="{{ upload_url }}" method="POST" 
+	      enctype="multipart/form-data" id="upload-form">
           <div style='height: 0px;width:0px; overflow:hidden;'>
             <input type="submit" name="submit" 
-             value="Submit"
-             id="submit" >
+		   value="Submit"
+		   id="submit" >
             <input id="file" type="file" name="file" 
-             onchange="$('#submit').click()"/>
+		   onchange="$('#submit').click()"/>
           </div>
           <div class="btn btn-info btn-lg btn-block" 
                id="upload_btn" 
                onclick="$('#file').click()"
-               {% if login_url %}disabled="disabled"{% endif %}>
-            <span class="hidden-xs">Upload a new image</span><span class="visible-xs">Upload new</span>
-          </div> 
+               {% if admin %}{% elif login_url or cred_points<15 %}disabled="disabled"{% endif %}>
+            <span class="hidden-xs">Upload a new image</span>
+	    <span class="visible-xs">Upload new</span>
+          </div><span style="color:lightblue" class="pull-right">
+	    {% if (login_url or admin) %}{% elif cred_points<15 %}You need at least 15 reputation points to upload images.{% endif %}</span> 
         </form>
       </div>
     </div>
@@ -37,25 +49,36 @@
   <!-- A little tricky as we're changing the links and adding a badge if the user
        has interpreted that particular image. -->
   {% for img_obj in img_objs %}
-  <div>
-    <div class="col-lg-3 col-md-4 col-xs-6 thumb">
+  <div id="image-{{img_obj.id}}">
+    <div class="col-lg-3 col-md-4 col-xs-6">
       <a class="thumbnail"
         {% if login_url %} data-toggle="modal" data-target="#signInModel" 
 	 href="#" {% elif user_id in img_obj.interpreters %} 
-	href="/results?image_key={{img_obj.id}}" {% else %} href="/pickr?image_key={{img_obj.id}}"{% endif %}>
-        <img class="img-responsive" src="{{img_obj.url}}" alt="" />
+	href="/results?image_key={{ img_obj.id }}" {% else %} href="/pickr?image_key={{ img_obj.id }}"{% endif %}>
+        <img class="img-responsive"
+        src="{{ img_obj.url(size=386, crop=True) }}"
+        alt="" />
       </a>
       <div class="caption" style="height:140px;">
-      	<span class="lead">{{img_obj.title}}</span>
-        {% if user_id == img_obj.user_id %}&nbsp;<a href="/add_image?image_key={{img_obj.id}}" class="glyphicon glyphicon-pencil" title="edit details"></a>{% endif %}
+        <span class="lead" title="{{ img_obj.title }}">
+          {{img_obj.title[:20]}}{% if img_obj.title | length>20 %}&#8230;{% endif %}
+        </span>
+        <img src="/static/img/icon-{{ img_obj.pickstyle }}.png" 
+             style="width:24px; margin-top:-8px" />
+        {% if (user_id == img_obj.user_id) or (admin) %}&nbsp;<a href="/add_image?image_key={{ img_obj.id }}" class="glyphicon glyphicon-cog" 
+							   title="Change image settings"></a>{% endif %}
         <span class="pull-right">
+          <!-- unlock feature later
           <span class="notification-icon">
-            {% if user_id not in img_obj.favouriters %}&nbsp;<span class="glyphicon glyphicon-certificate pt-unfaved" title="you have not starred this image"></span>
+            {% if user_id not in img_obj.favouriters %}&nbsp;<span class="glyphicon glyphicon-certificate pt-unfaved" 
+                 title="you have not starred this image"></span>
               {% else %}&nbsp;<span class="glyphicon glyphicon-star pt-faved" title="you starred this image"></span>
             {% endif %}
             <span class="pt-stars">{{ img_obj.favouriters | length }}</span>
           </span>
-        <span class="badge {% if user_id in img_obj.interpreters %}pt-counted{% else %}pt-uncounted{% endif %}">{{ img_obj.interpreters | length }}</span>
+          -->
+        <span class="badge {% if user_id in img_obj.interpreters %}pt-counted{% else %}pt-uncounted{% endif %}"
+              title="{{ img_obj.interpreters | length }}{% if img_obj.interpreters | length  == 1 %} person has{% else %} people have{% endif %} interpreted this image">{{ img_obj.interpreters | length }}</span>
         </span>
         <br />
         {{img_obj.description[:100]}}

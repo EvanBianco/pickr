@@ -6,12 +6,106 @@
 
 <head>
 <script src="/static/js/validator.js"></script>
+<script src="/static/js/bootbox.min.js"></script>
+ 
+<!-- okay, so this is pretty hacky -->
+<script type="text/javascript">
+    $(document).ready(function(){
+        $("#cc-by").click(function(){
+                $("#rightsholder1-div").hide();
+                $("#rightsholder2-div").hide();
+        });
+        $("#limited").click(function(){
+                $("#rightsholder1-div").hide();
+                $("#rightsholder2-div").hide();
+        });
+        $("#open").click(function(){
+                $("#rightsholder1-div").show();
+                $("#rightsholder2-div").hide();
+        });
+        $("#3rdparty").click(function(){
+                $("#rightsholder1-div").hide();
+                $("#rightsholder2-div").show();
+        });
+    });
+</script>
+
+<!-- This is a trick to get Jinja vars into JS
+     Supposedly it's good to separate the script
+     from the page. -->
+
+<meta id="this-image" 
+      data-id="{{ img_obj.id }}"
+      data-title="{{ img_obj.title }}">
+
+<script>
+  var thisImage = $('#this-image').data();
+  var id = thisImage.id
+  var title = thisImage.title
+  
+  // This actually deletes things.
+  function removeImage(){
+    $.ajax('image?image_key=' + id, {
+           type:'DELETE',
+           success: function(data){
+             if(data.success){
+               $('#image-'+id).remove();
+               bootbox.alert('Image has been deleted.', function(){
+                  $(window).off('beforeunload');
+                  document.location.href = "/library";
+               });
+             };
+            }
+         });
+  };
+
+  // This just checks if the user really wants
+  // to delete the image.
+  function confirmDelete(){
+          console.log('got to confirmDelete')
+          bootbox.confirm('Image will be deleted.', function(result){
+            if (result){
+               console.log('delete confirmed');
+               removeImage();
+             }
+          });
+  };
+
+  $(window).on('beforeunload', function(e){
+    // Can't do anything useful here.
+    // Firefox ignores even this text anyway.
+    return "The image will be deleted."
+  });
+
+  function unhook(){
+    $(window).off('beforeunload');
+  };
+
+  if (title !== '') {
+    // Then we're editing, not adding.
+    unhook();
+  }
+
+</script>
+
 </head>
 
 <!-- Page Content -->
 <div class="container">
 
-    <h1 class="page-header">{% if img_obj.title %}Edit{% else %}Add{% endif %} an image</h1>
+    <h1 class="page-header">{% if img_obj.title %}Edit{% else %}Add{% endif %} an image
+      <button class="btn btn-danger pull-right" 
+              onclick = "javascript:confirmDelete();" 
+              {% if admin %}{% elif img_obj.interpreters | length != 0 %}disabled{% endif %}
+              title="Permanently delete the image.">
+        {% if (admin) or (img_obj.interpreters | length == 0) %}Delete image{% else %}Image cannot be deleted{% endif %}
+      </button>
+      <span class="hidden-xs" 
+            style="float:right; margin-top:8px; margin-right: 12px;
+                font-size:50%; font-weight:normal;">
+              This image has {{ img_obj.interpreters | length }} interpretations.
+      </span>
+    </h1>
 
   <form role="form" class="form-horizontal"
         action="/add_image" method="POST"
@@ -21,7 +115,7 @@
           <label for="title" class="col-sm-2 control-label">Title</label>
           <div class="col-sm-6">
             <input class="form-control" type="text" id="title" 
-		               name="title" {% if img_obj.title %}value={{ img_obj.title }}{% endif %}
+		               name="title" {% if img_obj.title %}value="{{ img_obj.title }}"{% endif %}
                    data-match-error="Please provide a title for the image." required>
           </div>
           <div class="help-block with-errors"></div>
@@ -48,21 +142,21 @@
           <label for="pickstyle" class="col-sm-2 control-label">Pick style</label>
           <div class="radio col-sm-10">
             <label>
-              <input type="radio" name="pickstyle" id="points" value="points" {% if img_obj.pickstyle == "points" %}checked{% endif%} disabled>
-              Pick points. COMING SOON.
+              <input type="radio" name="pickstyle" id="points" value="points" {% if img_obj.pickstyle == "points" %}checked{% endif%} {% if img_obj.title %}disabled{% endif%}>
+              Pick points.
             </label>
           </div>
           <div class="radio col-sm-offset-2 col-sm-10">
             <label>
-              <input type="radio" name="pickstyle" id="line" value="line" {% if img_obj.title %}{% if img_obj.pickstyle == "line" %}checked{% endif%}
-              {% else %}checked{% endif %}>
+              <input type="radio" name="pickstyle" id="lines" value="lines" {% if img_obj.title %}{% if img_obj.pickstyle == "lines" %}checked{% endif%}
+              {% else %}checked{% endif %} {% if img_obj.title %}disabled{% endif%}>
               Pick a line.
             </label>
           </div>
-          <div class="radio disabled col-sm-offset-2 col-sm-10">
+          <div class="radio col-sm-offset-2 col-sm-10">
             <label>
-              <input type="radio" name="pickstyle" id="polygon" value="polygon" {% if img_obj.pickstyle == "polygon" %}checked{% endif%} disabled>
-              Pick a polygon. COMING SOON.
+              <input type="radio" name="pickstyle" id="polygons" value="polygons" {% if img_obj.pickstyle == "polygons" %}checked{% endif%} {% if img_obj.title %}disabled{% endif%}>
+              Pick a polygon.
             </label>
           </div>
         </div>
@@ -83,6 +177,7 @@
               This is my image and I am allowing its use here, but only here.
             </label>
           </div>
+
           <div class="radio col-sm-offset-2 col-sm-10">
             <label>
               <input type="radio" name="permission" id="open" 
@@ -90,6 +185,13 @@
               This is not my image, but it has an open license.
             </label>
           </div>
+          <div id="rightsholder1-div" class="col-sm-offset-2 col-sm-6" style="left:18px; top:2px; display:none;">
+            <input class="form-control" type="text" id="rightsholder1" 
+                   name="rightsholder1" {% if img_obj.rightsholder %}value="{{ img_obj.rightsholder }}"{% endif %}
+                   placeholder="Please provide the image owner if not you">
+          </div>
+
+
           <div class="radio col-sm-offset-2 col-sm-10">
             <label>
               <input type="radio" name="permission" id="3rdparty" 
@@ -98,25 +200,28 @@
             </label>
           </div>
 
-          <div class="col-sm-offset-2 col-sm-6" style="left:18px; top:2px;">
-            <input class="form-control" type="text" id="rightsholder" 
-                   name="rightsholder" {% if img_obj.rightsholder %}value={{ img_obj.rightsholder }}{% endif %}
+          <div id="rightsholder2-div" class="col-sm-offset-2 col-sm-6" style="left:18px; top:2px; display:none;">
+            <input class="form-control" type="text" id="rightsholder2" 
+                   name="rightsholder2" {% if img_obj.rightsholder %}value="{{ img_obj.rightsholder }}"{% endif %}
                    placeholder="Please provide the image owner if not you">
           </div>
+
 
 
         </div>
 
       <input type="hidden" name="image_key" value="{{image_key}}">
 
-      <button class="btn btn-lg col-sm-offset-2" type="submit" name="submit" value="Submit" id="submit">
+      <button class="btn btn-lg col-sm-offset-2" type="submit" 
+	      name="submit" value="Submit" id="submit"
+	      onClick="javascript:unhook();">
         Submit
       </button>
 
   </form>
 
   <div class="col-sm-offset-2" style="margin-top:24px;">
-    <img class="img-responsive img-rounded" src={{ img_obj.url }} alt="">
+    <img class="img-responsive img-rounded" src={{ img_obj.url(size=800) }} alt="">
   </div>
 </div><!-- end of container -->
 

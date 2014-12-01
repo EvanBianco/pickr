@@ -2,7 +2,7 @@
 import numpy as np
 import StringIO, json, base64
 
-from lib_db import Picks
+from lib_db import Picks, ImageObject, User, Vote
 
 from google.appengine.api import images
 from google.appengine.ext import blobstore
@@ -12,24 +12,41 @@ from PIL import Image
 from mmorph import dilate, sedisk
 
 
-
-def regularize(xarr, yarr, px, py):
+def interpolate(x_in, y_in):
     """
     For line interpretations.
     Connect the dots of each interpretation.
     
     """
-    horx = np.arange(np.amin(xarr), np.amax(xarr))
-    hory = np.interp(horx, xarr, yarr)
-    return horx.astype(int), hory.astype(int)
+
+
+    # Check difference in x and in y, so we can
+    # interpolate in the direction with the most range
+
+    x_range = np.arange(np.amin(x_in), np.amax(x_in)+1)
+    y_range = np.arange(np.amin(y_in), np.amax(y_in)+1)
+
+    # x_out = x_range
+    # y_out = np.interp(x_out, x_in, y_in)
+
+
+    if x_range.size >= y_range.size:
+        x_out = x_range
+        y_out = np.interp(x_out, x_in, y_in)
+    else:
+        y_out = y_range
+        x_out = np.interp(y_out, y_in, x_in)
+
+    return x_out.astype(int), y_out.astype(int)
 
     
-def normalize(arr, newmax):
+def normalize(a, newmax):
     """
-    Normalize the values of an array to some new max.
+    Normalize the values of an
+    array a to some new max.
     
     """
-    return (float(newmax) * arr) / np.amax(arr)
+    return (float(newmax) * a) / np.amax(a)
 
 
 def get_result_image(img_obj):
@@ -46,36 +63,80 @@ def get_result_image(img_obj):
     data = Picks.all().ancestor(img_obj).fetch(1000)
     
     # Get the dimensions.
-    #px, py = img_obj.size # This gets the image from the blobstore
-    px, py = img_obj.width, img_obj.height # This doesn't 
+    w, h = img_obj.width, img_obj.height
+    avg = (w + h) / 2.
 
     # Make an 'empty' image for all the results. 
-    heatmap_image = np.zeros((py,px))
+    heatmap_image = np.zeros((h, w))
 
     # Now loop over the interpretations and sum into that empty image.
     for user in data:
 
         # Make a new image for this interpretation.
-        user_image = np.zeros((py,px))
+        user_image = np.zeros((h, w))
 
         # Get the points.
         picks = np.array(json.loads(user.picks))
 
-        # Make a line of points (called h for horizon).
-        hx, hy = regularize(picks[:,0], picks[:,1], px, py)
+        print picks
 
-        # Hacky workaround to avoid problems with hardcoded
-        # image sizes.
-        hx = np.clip(hx, 0, px-1)
-        hy = np.clip(hy, 0, py-1)
+        if img_obj.pickstyle == 'polygons':
+            picks = np.append(picks, picks[0]).reshape(picks.shape[0]+1, picks.shape[1])
+
+        # Sort on x values.
+        #picks = picks[picks[:,0].argsort()]
+
+        # This needs refactoring!
+
+        # Deal with the points, and set the
+        # radius of the disk structuring element.
+        if img_obj.pickstyle != 'points':
+            for i in range(picks.shape[0] - 1):
+
+                xpair = picks[i:i+2,0]
+
+                if xpair[0] > xpair[1]:
+                    xpair = xpair[xpair[:].argsort()]
+                    xrev = True
+                else:
+                    xrev = False
+
+                ypair = picks[i:i+2,1]
+
+                print " ++ IN THE LOOP ++ "
+                print xpair, ypair
+
+                if ypair[0] > ypair[1]:
+                    ypair = ypair[ypair[:].argsort()]
+                    yrev = True
+                else:
+                    yrev = False
+
+                # Do the interpolation
+                x, y = interpolate(xpair, ypair)
+
+                if xrev: # then need to unreverse...
+                    x = x[::-1]
+                if yrev: # then need to unreverse...
+                    y = y[::-1]
+
+                # Build up the image
+                user_image[(y, x)] = 1.
+            
+            n = np.ceil(avg / 300.).astype(int) 
+
+        else:
+            x, y = picks[:,0], picks[:,1]
+            user_image[(y, x)] = 1.
+
+            n = np.ceil(avg / 150.).astype(int) # The radius of the disk structuring element
 
         # Make line into image.        
-        user_image[(hy,hx)] = 1.
+        #user_image[(y, x)] = 1.
 
         # Dilate this image.
-        n = np.ceil(py / 400.).astype(int) # The radius of the disk structuring element
-
-        dilated_image = dilate(user_image.astype(int), B = sedisk(r=n) )
+        dilated_image = dilate(user_image.astype(int),
+                               B=sedisk(r=n))
 
         # Add it to the running summed image.
         heatmap_image += dilated_image
@@ -98,29 +159,25 @@ def get_result_image(img_obj):
     a[heatmap_image==0] = 0 
 
     # Make the 4-channel image from an array.
-    x = np.dstack([r, g, b, a])
-    im_out = Image.fromarray(x.astype('uint8'), 'RGBA')
+    im = np.dstack([r, g, b, a])
+    im_out = Image.fromarray(im.astype('uint8'), 'RGBA')
 
     # Save out into file-like.
     output = StringIO.StringIO()
     im_out.save(output, 'png')
     
-    # We also need to know the number of interpretations.
-    count = len(data)
+    return base64.b64encode(output.getvalue())
 
-    return base64.b64encode(output.getvalue()), count
+def statistics():
 
+    stats = {"user_count": User.all().count(),
+             "image_count": ImageObject.all().count(),
+             "pick_count":  Picks.all().count(),
+             "vote_count": Vote.all().count()}
 
-def get_cred(user):
-
-    all_picks = Picks.all().filter("user =", user).fetch(1000)
-
-    cred_points = 0
-
-    for picks in all_picks:
-        cred_points += picks.votes
-
-    return cred_points
-
-
+    return stats
     
+
+
+ 
+

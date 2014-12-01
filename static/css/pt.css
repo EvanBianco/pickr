@@ -142,13 +142,13 @@ body {
   }
 
 .thumbnail{
-    /*width: 300px;*/
-    height: 200px;
-    overflow: auto;
+    height: 0px; /* no idea why this works, but it does */
+    padding-bottom:100%;
+    overflow: hidden;
 }
 
 .thumbnail img{
-// your styles for the images
+    /* your styles for the images */
 }
 
 .yellow {
@@ -170,8 +170,58 @@ body {
     color: red;
 }
 
+
+.glyphicon:disabled,
+.glyphicon.disabled {
+  color:lightgrey;
+}
+
+
+/*
+.btn-me {
+  color:white;
+  background-color:#55bb55;
+}
+
+.btn-me:active,
+.btn-me.active,
+.btn-me:hover,
+.btn-me.hover {
+  color:white;
+  background-color:#22cc33;
+}
+
+
+.btn-owner {
+  color:white;
+  background-color:#6699ee;
+}
+
+.btn-owner:active,
+.btn-owner.active,
+.btn-owner:hover,
+.btn-owner.hover {
+  color:white;
+  background-color:#0033cc;
+}
+
+.btn-everyone {
+  color:white;
+  background-color:#dd5555;
+}
+
+.btn-everyone:active,
+.btn-everyone.active,
+.btn-everyone:hover,
+.btn-everyone.hover {
+  color:white;
+  background-color:#dd0000;
+}
+*/
+
 a.disabled {
    color:gray;
    pointer-events: none;
    cursor: default;
 }
+

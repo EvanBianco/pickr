@@ -5,12 +5,27 @@
 {% block content %}
 
 <script>
-  var count = {{count}};
-  var overlay64 = "{{image}}";
-  var image_url = "{{ img_obj.url }}";
+
+  var interpretationCount = {{ count }}; // The number of interpretations on this image.
+  var userCount = {{ pick_users | length }} // Not including owner or self
+  
+  var ownerUser = "{{ owner_user }}";
+  var userID = "{{ user_id }}";      // This one won't change
+
+  // Loop over pick_users and populate the users list
+  // Question: Can't we just use pick_users directly?
+  var pickUsers = [];   // A list
+  {% for pick_owner in pick_users %}
+    pickUsers.push("{{ pick_owner }}");
+  {% endfor %}
+
+  var overlay64 = "{{ image }}";
+  var image_url = "{{ img_obj.url(size=1200) }}";
   var image_key = "{{ img_obj.key().id() }}";
   var baseImageWidth = "{{ img_obj.width }}";
   var baseImageHeight = "{{ img_obj.height }}";
+  var pickstyle = "{{ img_obj.pickstyle }}";
+
 </script>
 
 <script src="/static/js/raphael-min.js"></script>
@@ -21,59 +36,137 @@
 
 <div class="container">
 
-  <!-- col for buttons -->
-  <div class="col-md-offset-4 col-md-4 col-xs-offset-1 col-xs-10" style="height:8em;">
+<div class="row">
 
-    <!-- PREVIOUS button -->
-    <div class="col-lg-5 col-md-5 col-xs-4" style="top:2.6em;">
-  	<button type="button" id="previous-button" 
-  		class="btn btn-primary btn-lrg">
-  	  <span class="glyphicon glyphicon-chevron-left"></span> Prev<span class="hidden-xs">ious</span>
-  	</button>
-    </div>
+  <div class="col-md-4" >
 
-    <!-- VOTING buttons -->
-    <div class="col-lg-2 col-md-2 col-xs-4" 
-	 style="vertical-align:middle; text-align:center;">
+    <p class="lead">Compare your interpretation to the image uploader and everyone else... and vote on those that stand out.</p>
 
-      <!-- UP button -->
-      <button type="button" id="up-vote-button" 
-	      class="btn btn-default btn-sm">
-    	  <span class="glyphicon glyphicon-thumbs-up grey"
-    		id="thumbs-up">
-    	  </span>
+  </div>
+
+  <!-- col for stepping and voting buttons -->
+  <div class="col-md-8" style="height:8em; top:1em;">
+
+    <!-- MY PICK - start with this only -->
+    <div class="btn-group" role="group" style="margin-left:16px;">
+      <button type="button" id="me-button"
+          class="btn btn-success btn-lrg active"
+          style="height:59px;" title="Toggle my interpretation">
+        <span>My pick</span>
       </button>
-  	  
-      <!-- count -->
-    	<div id="vote-count" 
-    	     style="font-size:200%; font-weight:bold; text-align:center;">
-    	  {{count}}
-    	</div>
-
-    <!-- DOWN button -->
-    	<button type="button" id="down-vote-button" 
-    		class="btn btn-default btn-sm">
-    	  <span class="glyphicon glyphicon-thumbs-down grey"
-    		id="thumbs-down"></span>
-    	</button>
-
-    </div>
-
-    <!-- NEXT button -->
-    <div class="col-lg-5 col-md-5 col-xs-4" style="top:2.6em;">
-      <button type="button" id="next-button" 
-  	    class="btn btn-primary btn-lrg">
-  	  <span class="glyphicon glyphicon-chevron-right" ></span> 
-  	  Next
+      <button type="button" class="btn btn-default btn-lrg"
+          disabled style="height:59px; width:4em;">
+        <span id="my-vote-count" style="font-size:150%; font-weight:bold; line-height:-8px">
+        </span><!-- count updated by results.js --><br /><span style="font-size:67%;">votes</span>
       </button>
-    </div>
+    </div> <!-- end of MY PICK buttons -->
 
-  </div><!-- end of col with buttons -->
+    <!-- OWNER PICK -->
+    <!-- disable this button if no owner interpretation 
+         or if the current user is the owner -->
+    <div class="btn-group" role="group" style="margin-left:16px;">
+      <button type="button" id="owner-button" class="btn btn-primary btn-lrg"
+          style="height:59px;" title="Toggle the uploader's interpretation"
+          {% if user_id == img_obj.user_id %}disabled{% endif %}>
+        Uploader's pick
+      </button>
+      <div class="btn-group btn-group-vertical" role="group">
+      <button type="button" id="owner-up-vote-button" class="btn btn-default btn-sm disabled" title="Upvote" {% if user_id == img_obj.user_id %}disabled{% endif %}><span class="glyphicon glyphicon-thumbs-up grey" id="owner-thumbs-up"></span></button>
+      <button type="button" id="owner-down-vote-button" class="btn btn-default btn-sm disabled" title="Downvote" {% if user_id == img_obj.user_id %}disabled{% endif %}><span class="glyphicon glyphicon-thumbs-down grey" id="owner-thumbs-down"></span></button>
+      </div>
+      <button type="button" class="btn btn-default btn-lrg" disabled style="height:59px; width:4em;">
+        <span id="owner-vote-count" 
+              style="font-size:150%; font-weight:bold; line-height:-8px"
+              title="The number of votes the image uploader's pick has">
+        –</span><!-- count updated by results.js --><br /><span style="font-size:67%;">votes</span>
+      </button>
+    </div><!-- end of OWNER PICK buttons -->
 
-    <div id="image-div"> </div>
-    <p class="pull-right" style="font-size:80%">Uploaded by: {{img_obj.user.nickname()}} &mdash; Image owner: {{ img_obj.rightsholder }}</p>
-    <div class="col-md-offset-2 col-md-8 col-xs-offset-1 col-xs-10" style="top:12px;" id="overlay-slider"></div>
+    <!-- EVERYONE ELSE -->
+    <div class="btn-group" role="group" style="margin-left:16px;">
+      <button type="button" id="previous-button" class="btn btn-danger btn-lrg disabled" style="height:59px;">
+          <span class="glyphicon glyphicon-chevron-left">
+      </button>
+      <button type="button" id="everyone-button"
+          class="btn btn-danger btn-lrg"
+          style="height:59px;" title="Toggle everyone elses's interpretations">
+        Everyone else<br />
+	<span id="interp-no">
+	  {% if pick_users %}1{% else %}0{% endif %}
+	</span> of {{ pick_users | length }}
+      </button>
+      <div class="btn-group btn-group-vertical" role="group">
+        <button type="button" id="up-vote-button" class="btn btn-default btn-sm disabled" title="Upvote">
+	  <span class="glyphicon glyphicon-thumbs-up grey" id="thumbs-up"></span></button>
+        <button type="button" id="down-vote-button" 
+		class="btn btn-default btn-sm disabled" 
+		title="Downvote">
+	  <span class="glyphicon glyphicon-thumbs-down grey" 
+		id="thumbs-down">
+	    
+	  </span></button>
+      </div>
+      <button type="button" class="btn btn-default btn-lrg" disabled style="height:59px; width:4em;">
+        <span id="vote-count" style="font-size:150%; font-weight:bold; line-height:-8px">
+        –</span><!-- count updated by results.js --><br /><span style="font-size:67%;">votes</span>
+      </button>
+      <button type="button" id="next-button" class="btn btn-danger btn-lrg disabled" style="height:59px;">
+        <span class="glyphicon glyphicon-chevron-right">
+      </button>
+    </div> <!-- end of EVERYONE ELSE buttons -->
 
+
+
+  </div> <!-- end of col -->
+  
+  </div> <!-- end of row -->
+
+
+    <div id="image-div"> </div> <!-- Image goes here -->
+
+    <!-- Overlay slider -->
+    <div class="col-md-offset-2 col-md-8 col-xs-offset-1 col-xs-10" title="Change the opacity of the picks" style="margin-top:18px; margin-bottom:36px;" id="overlay-slider"></div>
+
+    <!-- Metadata -->
+    <div class="well" style="clear:both;">
+      <p><span style="font-size:150%; font-weight:bold;">{{ img_obj.title }}</span>&nbsp;&nbsp; 
+        <span class="pull-right" style="font-size:80%; font-weight:normal;">
+          {{ img_obj.width }} &times; {{ img_obj.height }} &nbsp;•&nbsp; Uploaded by {{ img_obj.nickname }}
+        </span>
+        <!--<span class="notification-icon">
+          {% if user_id not in img_obj.favouriters %}&nbsp;<span class="glyphicon glyphicon-certificate pt-unfaved" 
+               title="you have not starred this image"></span>
+            {% else %}&nbsp;<span class="glyphicon glyphicon-star pt-faved" title="you starred this image"></span>
+          {% endif %}
+          <span class="pt-stars">{{ img_obj.favouriters | length }}</span>
+        </span>-->
+        <span class="badge {% if user_id in img_obj.interpreters %}pt-counted{% else %}pt-uncounted{% endif %}"
+              title="{{ img_obj.interpreters | length }}{% if img_obj.interpreters | length  == 1 %} person has{% else %} people have{% endif %} interpreted this image">
+          {{ img_obj.interpreters | length }}
+        </span>
+      </p>
+      <p>{{ img_obj.description }}</p>
+      <p><strong>Reference</strong> &nbsp;&nbsp; Pickthis.io user {{ img_obj.nickname }}. {{ img_obj.title }}, image no. <a href="http://pickthis.io/{{ img_obj.id }}">{{ img_obj.id }}</a>. Permission: {{ img_obj.rightsholder.strip(' .!?') }}, {{ img_obj.permission.strip(' .!?') }}.</p>
+    </div><!-- End of well -->
+
+    <!-- Comments form -->
+    <h4>Comments</h4>
+    <ul class="list-group">
+      {% for comment in comments %}
+      <li class="list-group-item"><strong>{{ comment.nickname }}</strong><br />
+      {{ comment.text }}</li>
+      {% endfor %}
+    </ul>
+    <form role="form" action="/comment" method="POST">
+      <div class="form-group">
+	<input type="hidden" value="{{img_obj.key().id()}}"
+	       name="image_key">
+        <textarea name="text" id="text" class="form-control" rows="3" 
+		  placeholder="Add a comment"></textarea>
+      </div>
+      <button type="submit" class="btn btn-default">Add</button>
+    </form>
+ 
 </div><!-- end of container -->
 
 <div style="bottom:24px;"><!-- Just a spacer -->&nbsp;</div>

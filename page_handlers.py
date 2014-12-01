@@ -2,6 +2,7 @@ import webapp2
 import hashlib
 import StringIO
 import time
+import cgi
 
 from google.appengine.api import users
 from google.appengine.ext.webapp import blobstore_handlers
@@ -12,9 +13,10 @@ from google.appengine.ext import blobstore
 # For image manipulation
 from PIL import Image
 
-from pickthis import get_result_image, get_cred
+from pickthis import get_result_image, statistics
 from constants import local, env, db_parent
-from lib_db import ImageObject
+from lib_db import ImageObject, Picks, User
+from lib_db import Comment
 
 # For image serving
 import cloudstorage as gcs
@@ -30,7 +32,7 @@ def authenticate(func):
             self.redirect('/')
             return
         else:
-            return func(self, user,*args, **kwargs)
+            return func(self, user.user_id(),*args, **kwargs)
     return authenticate_and_call
 
 
@@ -54,31 +56,40 @@ class ErrorHandler(webapp2.RequestHandler):
 
         self.response.write(html)
         
-# Make a basic PageRequest class to handle the params we always need...
+# Make a basic PageRequest class to handle the params we always need..
 class PickThisPageRequest(webapp2.RequestHandler):
     
     def get_base_params(self, **kwargs):
 
-        user = users.get_current_user()
+        g_user = users.get_current_user()
         
-        if user:
+        if g_user:
+
+            user = User.all().filter("user_id =", g_user.user_id())
+            user = user.get()
+
+        
             logout_url = users.create_logout_url('/')
             login_url = None
-            email_hash = hashlib.md5(user.email()).hexdigest()
-            nickname = user.nickname()
-            cred_points = get_cred(user)
+            email_hash = hashlib.md5(user.email).hexdigest()
+            nickname = user.nickname
+
+            cred_points = user.cred()
+            admin = users.is_current_user_admin()
         else:
             logout_url = None
             login_url = users.create_login_url('/')
             email_hash = ''
             nickname = None
             cred_points = None
+            admin = False
 
         params = dict(logout_url=logout_url,
                       login_url=login_url,
                       email_hash=email_hash,
                       nickname=nickname,
-                      cred_points=cred_points)
+                      cred_points=cred_points,
+                      admin=admin)
 
         params.update(kwargs)
         return params
@@ -89,18 +100,31 @@ class MainPage(webapp2.RequestHandler):
     @error_catch
     def get(self):
 
-        user = users.get_current_user()
+        g_user = users.get_current_user()
 
-        if not user:
+        if not g_user:
             login_url = users.create_login_url('/')
             template = env.get_template("main.html")
-            html = template.render(login_url=login_url)
+            html = template.render(login_url=login_url,
+                                   stats=statistics())
             self.response.out.write(html)
 
         else:
             logout_url = users.create_logout_url('/')
             login_url = None
-            email_hash = hashlib.md5(user.email()).hexdigest()
+            email_hash = hashlib.md5(g_user.email()).hexdigest()
+
+            user_obj = User.all().ancestor(db_parent)
+            user_obj = user_obj.filter("user_id =", g_user.user_id())
+            user_obj = user_obj.get()
+
+            if not user_obj:
+                user_obj = User(user_id=g_user.user_id(),
+                                nickname=g_user.nickname(),
+                                parent=db_parent,
+                                email=g_user.email())
+                user_obj.put()
+            
             self.redirect('/library')
             
 
@@ -109,15 +133,34 @@ class ResultsHandler(PickThisPageRequest):
     @error_catch
     def get(self):
 
+        user_id = users.get_current_user().user_id()
         image_key = self.request.get("image_key")
         img_obj = ImageObject.get_by_id(int(image_key),
                                         parent=db_parent)
+        
+        # DO THE MAGIC!
+        image = get_result_image(img_obj)
 
-        image, count = get_result_image(img_obj)
+        picks = Picks.all().ancestor(img_obj).fetch(1000)
+        pick_users = [p.user_id for p in picks]
+        count = len(pick_users)
+
+        owner_user = img_obj.user_id
+        
+        # Filter out the owner and current user
+        if user_id in pick_users: pick_users.remove(user_id) 
+        if owner_user in pick_users: pick_users.remove(owner_user) 
+
+        # Get a list of comment strings, if any.
+        comments = Comment.all().ancestor(img_obj).order('datetime').fetch(1000)
 
         params = self.get_base_params(count=count,
                                       image=image,
-                                      img_obj=img_obj)
+                                      img_obj=img_obj,
+                                      user_id=user_id,
+                                      owner_user=owner_user,
+                                      pick_users=pick_users, 
+                                      comments=comments)
 
         template = env.get_template("results.html")
         html = template.render(params)
@@ -130,7 +173,8 @@ class AboutHandler(PickThisPageRequest):
     def get(self):
         template_params = self.get_base_params()
         template = env.get_template('about.html')
-        html = template.render(template_params)
+        html = template.render(template_params,
+                               stats=statistics())
         self.response.write(html)
 
 
@@ -147,7 +191,7 @@ class PickerHandler(PickThisPageRequest):
 
     @error_catch
     @authenticate
-    def get(self, user, id=None):
+    def get(self, user_id, id=None):
 
         if id:
             key_id = id
@@ -184,8 +228,18 @@ class LibraryHandler(blobstore_handlers.BlobstoreUploadHandler,
             upload_url = ''
             user_id = ''
 
-        # Get the images.
-        img_objs = ImageObject.all().ancestor(db_parent).fetch(1000)
+        # Get the images. 
+        # We need to delete images without titles. 
+        # I would rather do this in add_image.html
+        # but it seems you can't trigger deletion
+        # with $(window).on(beforeunload)...
+        # https://developer.mozilla.org/en-US/docs/WindowEventHandlers.onbeforeunload
+        if users.is_current_user_admin():
+            # Then see everything.
+            img_objs = ImageObject.all().ancestor(db_parent).fetch(1000)
+        else:
+            # Then omit aborted uploads.
+            img_objs = ImageObject.all().ancestor(db_parent).filter("title !=", '').fetch(1000)
 
         template = env.get_template('choose.html')
 
@@ -200,8 +254,7 @@ class LibraryHandler(blobstore_handlers.BlobstoreUploadHandler,
     @error_catch
     def post(self):
 
-        user = users.get_current_user()
-
+        user_id = users.get_current_user().user_id()
 
         upload_files = self.get_uploads()
         blob_info = upload_files[0]
@@ -214,7 +267,7 @@ class LibraryHandler(blobstore_handlers.BlobstoreUploadHandler,
         output = StringIO.StringIO()
         im.save(output, format='PNG')
 
-        bucket = '/pickr_bucket/'
+        bucket = '/pick-this'
         output_filename = (bucket +'/2' + str(time.time()))
 
         gcsfile = gcs.open(output_filename, 'w')
@@ -233,8 +286,8 @@ class LibraryHandler(blobstore_handlers.BlobstoreUploadHandler,
         new_db = ImageObject(description=description,
                              image=output_blob_key,
                              parent=db_parent,
-                             user=user,
-            user_id=user.user_id())
+                             user_id=user_id
+                             )
 
         new_db.width = new_db.size[0]
         new_db.height = new_db.size[1]
@@ -249,55 +302,73 @@ class AddImageHandler(PickThisPageRequest):
 
     @error_catch
     @authenticate
-    def get(self, user):
+    def get(self, user_id):
 
         image_key = self.request.get("image_key")
 
         img_obj = ImageObject.get_by_id(int(image_key),
                                         parent=db_parent)
-        
-        template_params = self.get_base_params()
-        template_params.update(img_obj=img_obj,
-                               image_key=image_key)
 
-        template = env.get_template("add_image.html")
-        html = template.render(template_params)
-        self.response.write(html)
+        if((user_id == img_obj.user_id) or
+           (users.is_current_user_admin())):
+
+            template_params = self.get_base_params()
+            template_params.update(img_obj=img_obj,
+                                   image_key=image_key)
+
+            template = env.get_template("add_image.html")
+            html = template.render(template_params)
+            self.response.write(html)
+
+        else:
+            raise Exception
+            
 
     @error_catch
     @authenticate
-    def post(self, user):
+    def post(self, user_id):
 
+        user = User.all().filter("user_id =", user_id).get()
+        
         image_key = self.request.get("image_key")
 
-        title = self.request.get("title")
-        description = self.request.get("description")
-        challenge = self.request.get("challenge")
+        title = cgi.escape(self.request.get("title"))
+        description = cgi.escape(self.request.get("description"))
+        challenge = cgi.escape(self.request.get("challenge"))
         pickstyle = self.request.get("pickstyle")
         permission = self.request.get("permission")
-        rightsholder = self.request.get("rightsholder")
+        rightsholder1 = cgi.escape(self.request.get("rightsholder1"))
+        rightsholder2 = cgi.escape(self.request.get("rightsholder2"))
 
-        if not rightsholder:
-            rightsholder = user.nickname()
+        # This is pretty gross
+        if not rightsholder1:
+            if not rightsholder2:
+                rightsholder = user.nickname
+            else:
+                rightsholder = rightsholder2
+        else:
+            rightsholder = rightsholder1
 
         img_obj = ImageObject.get_by_id(int(image_key),
                                         parent=db_parent)
 
+        
+        if not ((user_id == img_obj.user_id) or
+               (users.is_current_user_admin())):
+            raise Exception
+        
+
+        
         img_obj.width = img_obj.size[0]
         img_obj.height = img_obj.size[1]
 
-        img_obj.title = title
-        img_obj.description = description
-        img_obj.challenge = challenge
+        img_obj.title = title.capitalize()
+        img_obj.description = description.capitalize()
+        img_obj.challenge = challenge.capitalize()
         img_obj.pickstyle = pickstyle
         img_obj.permission = permission
         img_obj.rightsholder = rightsholder
-        img_obj.user = user
-        img_obj.user_id = user.user_id()
-
-        # Seems like I have to do this to instantiate properly.
-        # I thought that's what default=[] is for.
-        #img_obj.interpreters = ['default_user']
+  
 
         img_obj.put()
 

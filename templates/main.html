@@ -3,7 +3,14 @@
 {% block title %}{% endblock %}
 
 {% block content %}
-      
+
+<head>
+  <!-- Flip counter script -->
+  <script type="text/javascript" src="/static/js/flipcounter.min.js"></script>
+  <!-- Style sheet for the counter -->
+  <link rel="stylesheet" type="text/css" href="/static/css/counter.css" />
+</head>
+
 <div class="ribbon-banner">in beta</div>
 
 <div class="container">
@@ -15,14 +22,31 @@
     <p style="margin-top:20px" class="lead pull-right visible-xs">Sign in above with your Google account.</p>
   </div>
 
-  <div class="container">
-    <img class="img-responsive" src="/static/img/quick_whatis.png" />
+  <div class="container" style="clear:both;">
+    <a href="/library"><img class="img-responsive" src="/static/img/quick_whatis.png" /></a>
   </div>
 
   <div class="container">
     <p style="margin-top:0px" class="lead">Or continue without signing in.... <a href="/library">Let's go!</a></p>
   </div>
 
+<!-- REMOVE FOR NOW
+     Might want to shrink the sprite and use in the navbar
+     
+  <div class="container">
+    <div id="flip-counter" class="flip-counter"></div>
+  </div>
+--> 
+
 </div>
+
+  <script type="text/javascript">
+
+  $(document).ready(function(){
+    // Initialize a new counter
+    var myCounter = new flipCounter('flip-counter', { value:{{ stats['image_count'] }}, auto:'False'});
+  });
+  </script>
+
 
 {% endblock %}
